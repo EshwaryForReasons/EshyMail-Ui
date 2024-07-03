@@ -1,0 +1,45 @@
+$default-background: #121212;
+$hovered-background: #444444;
+$pressed-background: #222222;
+$seperator-border-color: #444444;
+$default-text: #ffffff;
+$secondary-text: #121212;
+$default-gutter-color: #cccccc;
+$hovered-gutter-color: #aaaaaa;
+
+.email-list {
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    
+    .email-delegate {
+        display: flex;
+        background-color: $default-background;
+        color: $default-text;
+        min-height: 40px;
+        transition: 0.2s;
+        align-items: center;
+        font-size: 0.8rem;
+        border-bottom: solid $seperator-border-color 1px;
+        padding: 10px;
+        transition: 0.2s;
+
+        .sender-name {
+            width: 25%;
+            min-width: 100px;
+            max-width: 200px;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        &:hover {
+            background-color: $hovered-background !important;
+        }
+    }
+
+    .selected {
+        background-color: #cccccc !important;
+    }
+}

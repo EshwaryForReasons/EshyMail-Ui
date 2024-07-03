@@ -1,0 +1,52 @@
+$default-background: #121212;
+$hovered-background: #444444;
+$pressed-background: #222222;
+$seperator-border-color: #444444;
+$default-text: #ffffff;
+$secondary-text: #121212;
+$default-gutter-color: #cccccc;
+$hovered-gutter-color: #aaaaaa;
+
+.main {
+    display: flex;
+    flex-direction: row;
+}
+
+.gutter {
+    background-color: $default-gutter-color;
+    float: left;
+    height: 100vh;
+
+    &:hover {
+        background-color: $hovered-gutter-color;
+    }
+}
+
+.split {
+    float: left;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+.split-view {
+    width: 100%;
+}
+
+.email-view {
+    height: 100vh;
+    width: 100%;
+    float: right;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    background-color: #ffffff;
+    color: $secondary-text;
+
+    .email-subject {
+        height: 5vh;
+        width: 100%;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        padding-left: 10px;
+    }
+}
