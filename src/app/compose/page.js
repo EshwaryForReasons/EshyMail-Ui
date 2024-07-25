@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
-import {Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue} from "C/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "C/components/ui/select"
 import { Button } from '@mui/material';
-import MultiEmailTextField, {NoOutlineTextField} from './multi_email_text_field';
+import MultiEmailTextField, { NoOutlineTextField } from './multi_email_text_field';
 import "react-quill/dist/quill.snow.css"
-import {Account} from "C/components/data_structures"
+import { Mailbox, Account } from "C/components/data_structures"
 import "C/styles/compose.scss"
 
 const QuillEditor = dynamic(() => import('react-quill'), { ssr: false });
@@ -18,14 +18,14 @@ export default function Compose() {
 	const [content, setContent] = useState('');
 
 	const onSendToAccountChanged = (newAccountPtr) => {
-        for (let i in accounts) {
-            accounts[i].selected = false;
-            if (accounts[i].accountPtr == newAccountPtr) {
-                accounts[i].selected = true;
-            }
-        }
-    };
-	
+		for (let i in accounts) {
+			accounts[i].selected = false;
+			if (accounts[i].accountPtr == newAccountPtr) {
+				accounts[i].selected = true;
+			}
+		}
+	};
+
 	const quillModules = {
 		toolbar: [
 			[{ header: [1, 2, 3, false] }],
@@ -76,11 +76,14 @@ export default function Compose() {
 
 	};
 
-	const jsAddComposeAccount = (accountPtr, email) => {
-		setAccounts(prevAccounts => [
-			...prevAccounts,
-			new Account(accountPtr, email, "")
-		]);
+	const jsAddComposeAccount = (accountPtr, email, name, serializedMailboxes) => {
+		const deserializeIndividual = (individualSerializedMailbox) => {
+			const delimiter_pos = individualSerializedMailbox.indexOf("&&");
+			const name = individualSerializedMailbox.substring(0, delimiter_pos);
+			const flags = parseInt(individualSerializedMailbox.substring(delimiter_pos + 2));
+			return new Mailbox(name, flags);
+		};
+		setAccounts(prevAccounts => [...prevAccounts, new Account(accountPtr, email, name, serializedMailboxes.split("&&&&").map(deserializeIndividual))]);
 	};
 
 	const jsRemoveComposeAccount = (email) => {
@@ -89,14 +92,22 @@ export default function Compose() {
 
 	var b_ran = false;
 	useEffect(() => {
-		if(b_ran)
+		if (b_ran)
 			return;
 
 		b_ran = true;
 
-		window.cefRegisterFunc("jsAddComposeAccount", jsAddComposeAccount);
-		window.cefRegisterFunc("jsRemoveComposeAccount", jsRemoveComposeAccount);
-		window.cefUpdateComposeAccountList();
+		window.cefRegisterFunc("RemoveComposeAccount", jsRemoveComposeAccount);
+		
+		window.cefGetAccountList((accountPtr, email, name, serializedMailboxes) => {
+			const deserializeIndividual = (individualSerializedMailbox) => {
+				const delimiter_pos = individualSerializedMailbox.indexOf("&&");
+				const name = individualSerializedMailbox.substring(0, delimiter_pos);
+				const flags = parseInt(individualSerializedMailbox.substring(delimiter_pos + 2));
+				return new Mailbox(name, flags);
+			};
+			setAccounts(prevAccounts => [...prevAccounts, new Account(accountPtr, email, name, serializedMailboxes.split("&&&&").map(deserializeIndividual))]);
+		});
 	}, []);
 
 	return (
@@ -105,17 +116,17 @@ export default function Compose() {
 				<div className="send-from">
 					<span className="label">Send from: </span>
 					<Select onValueChange={onSendToAccountChanged}>
-					<SelectTrigger className="w-60">
-						<SelectValue placeholder="Select Account" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectGroup>
-						<SelectLabel>Accounts</SelectLabel>
-						{accounts.map(account => (
-							<SelectItem key={account.accountPtr} value={account.accountPtr}>{account.email}</SelectItem>
-						))}
-						</SelectGroup>
-					</SelectContent>
+						<SelectTrigger className="w-60">
+							<SelectValue placeholder="Select Account" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectGroup>
+								<SelectLabel>Accounts</SelectLabel>
+								{accounts.map(account => (
+									<SelectItem key={account.accountPtr} value={account.accountPtr}>{account.email}</SelectItem>
+								))}
+							</SelectGroup>
+						</SelectContent>
 					</Select>
 				</div>
 

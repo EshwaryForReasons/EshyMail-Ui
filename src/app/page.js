@@ -3,19 +3,19 @@
 import { useEffect, useState } from "react"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "C/components/ui/resizable"
 import { ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuSeparator, ContextMenuShortcut, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger } from "C/components/ui/context-menu"
-import { Account, MessageHeader, EmailContent } from "C/components/data_structures"
+import { Mailbox, Account, MessageHeader, EmailContent } from "C/components/data_structures"
 import LeftPanel from "./left_panel"
 import EmailsList from "./emails_list"
 import "C/styles/main.scss"
 
 const EmailView = ({ emailContent }) => (
-	<div className="email-view">
+	<div className="scrollbar-thin h-screen w-full float-right overflow-y-auto text-[#121212] bg-[#ffffff]">
 		{emailContent.subject != "" &&
-			<div className="email-subject">
+			<div className="flex items-center font-bold w-full p-1 pl-4">
 				<p>{"Subject: " + emailContent.subject}</p>
 			</div>
 		}
-		<div dangerouslySetInnerHTML={{ __html: emailContent.content }}></div>
+		<div className="px-10" dangerouslySetInnerHTML={{ __html: emailContent.content }}></div>
 	</div>
 );
 
@@ -27,8 +27,15 @@ export default function Home() {
 	const [messageHeaders, setMessageHeaders] = useState([]);
 	const [emailContent, setEmailContent] = useState(new EmailContent("<no subject>", ""));
 
-	const jsAddAccount = (accountPtr, email) =>
-		setAccounts(prevAccounts => [...prevAccounts, new Account(accountPtr, email, "")]);
+	const jsAddAccount = (accountPtr, email, name, serializedMailboxes) => {
+		const deserializeIndividual = (individualSerializedMailbox) => {
+			const delimiter_pos = individualSerializedMailbox.indexOf("&&");
+			const name = individualSerializedMailbox.substring(0, delimiter_pos);
+			const flags = parseInt(individualSerializedMailbox.substring(delimiter_pos + 2));
+			return new Mailbox(name, flags);
+		};
+		setAccounts(prevAccounts => [...prevAccounts, new Account(accountPtr, email, name, serializedMailboxes.split("&&&&").map(deserializeIndividual))]);
+	}
 
 	const jsRemoveAccount = (email) =>
 		setAccounts(prevAccounts => prevAccounts.filter(prevAccount => prevAccount.email !== email));
@@ -44,24 +51,12 @@ export default function Home() {
 		setEmailContent(new EmailContent(subject, emailContent));
 
 	const jsUpdateMessageHeader = (accountPtr, uid, seen, flagged) => {
-		const dirtyMessageHeader = messageHeaders.filter(messageHeader => messageHeader.accountPtr == accountPtr && messageHeader.uid == uid)[0];
-		dirtyMessageHeader.seen = seen;
-		dirtyMessageHeader.flagged = flagged;
-		setCounter(prevCounter => prevCounter + 1);
-
-		// setMessageHeaders(prevMessageHeaders => {
-		// 	return prevMessageHeaders.map(messageHeader => {
-		// 		if (messageHeader.accountPtr == accountPtr && messageHeader.uid == uid) {
-		// 			return {
-		// 				...messageHeader,
-		// 				seen: seen,
-		// 				flagged: flagged
-		// 			};
-		// 		} else {
-		// 			return messageHeader;
-		// 		}
-		// 	});
-		// });
+		setMessageHeaders(prevMessageHeaders =>
+			prevMessageHeaders.map(messageHeader => {
+				const bUpdateThisOne = messageHeader.accountPtr == accountPtr && messageHeader.uid == uid;
+				return bUpdateThisOne ? { ...messageHeader, seen: seen, flagged: flagged} : messageHeader;
+			})
+		);
 	};
 
 	var b_ran = false;
@@ -70,12 +65,20 @@ export default function Home() {
 			return;
 
 		b_ran = true;
-		window.cefRegisterFunc("jsAddAccount", jsAddAccount);
-		window.cefRegisterFunc("jsRemoveAccount", jsRemoveAccount);
-		window.cefRegisterFunc("jsAddMessageHeader", jsAddMessageHeader);
-		window.cefRegisterFunc("jsUpdateEmailContent", jsUpdateEmailContent);
-		window.cefRegisterFunc("jsUpdateMessageHeader", jsUpdateMessageHeader);
-		window.cefUpdateAccountList();
+		window.cefRegisterFunc("RemoveAccount", jsRemoveAccount);
+		window.cefRegisterFunc("AddMessageHeader", jsAddMessageHeader);
+		window.cefRegisterFunc("UpdateEmailContent", jsUpdateEmailContent);
+		window.cefRegisterFunc("UpdateMessageHeader", jsUpdateMessageHeader);
+
+		window.cefGetAccountList((accountPtr, email, name, serializedMailboxes) => {
+			const deserializeIndividual = (individualSerializedMailbox) => {
+				const delimiter_pos = individualSerializedMailbox.indexOf("&&");
+				const name = individualSerializedMailbox.substring(0, delimiter_pos);
+				const flags = parseInt(individualSerializedMailbox.substring(delimiter_pos + 2));
+				return new Mailbox(name, flags);
+			};
+			setAccounts(prevAccounts => [...prevAccounts, new Account(accountPtr, email, name, serializedMailboxes.split("&&&&").map(deserializeIndividual))]);
+		});
 	}, []);
 
 	const loadMoreMessageHeaders = () =>
@@ -91,7 +94,7 @@ export default function Home() {
 
 	return (
 		<div className="main">
-			<LeftPanel accounts={accounts} setMessageHeaders={setMessageHeaders} />
+			<LeftPanel accounts={accounts} setAccounts={setAccounts} setMessageHeaders={setMessageHeaders} />
 			<ResizablePanelGroup
 				direction="horizontal"
 				className="rounded-lg border">

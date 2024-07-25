@@ -119,7 +119,7 @@ export default function AccountsPage({accounts}) {
                         <DialogTitle>Are you sure?</DialogTitle>
                         <DialogDescription>
                             This will delete the following accounts and the corresponding data:
-                            {accounts.filter(account => account.selected).map(acc => <li>{acc.email}</li>)}
+                            {accounts.filter(account => account.selected).map(acc => <li key={acc.email}>{acc.email}</li>)}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid grid-cols-2 gap-4">

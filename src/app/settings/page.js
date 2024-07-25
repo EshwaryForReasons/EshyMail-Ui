@@ -1,21 +1,21 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import { Button } from "C/components/ui/button"
-import { Input } from "C/components/ui/input"
-import { Label } from "C/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "C/components/ui/tabs"
 import AccountsPage from "./accounts_tab"
-import {Account} from "C/components/data_structures"
+import {Mailbox, Account} from "C/components/data_structures"
 
 export default function Settings() {
 	const [accounts, setAccounts] = useState([]);
 
-    const jsAddSettingsAccount = (accountPtr, email) => {
-		setAccounts(prevAccounts => [
-			...prevAccounts,
-			new Account(accountPtr, email, "")
-		]);
+    const jsAddSettingsAccount = (accountPtr, email, name, serializedMailboxes) => {
+        const deserializeIndividual = (individualSerializedMailbox) => {
+			const delimiter_pos = individualSerializedMailbox.indexOf("&&");
+			const name = individualSerializedMailbox.substring(0, delimiter_pos);
+			const flags = parseInt(individualSerializedMailbox.substring(delimiter_pos + 2));
+			return new Mailbox(name, flags);
+		};
+		setAccounts(prevAccounts => [...prevAccounts, new Account(accountPtr, email, name, serializedMailboxes.split("&&&&").map(deserializeIndividual))]);
 	};
 
     const jsRemoveComposeAccount = (email) => {
@@ -29,9 +29,17 @@ export default function Settings() {
 
 		b_ran = true;
 
-		window.cefRegisterFunc("jsAddSettingsAccount", jsAddSettingsAccount);
-		window.cefRegisterFunc("jsRemoveSettingsAccount", jsRemoveComposeAccount);
-		window.cefUpdateSettingsAccountList();
+		window.cefRegisterFunc("RemoveSettingsAccount", jsRemoveComposeAccount);
+		
+        window.cefGetAccountList((accountPtr, email, name, serializedMailboxes) => {
+			const deserializeIndividual = (individualSerializedMailbox) => {
+				const delimiter_pos = individualSerializedMailbox.indexOf("&&");
+				const name = individualSerializedMailbox.substring(0, delimiter_pos);
+				const flags = parseInt(individualSerializedMailbox.substring(delimiter_pos + 2));
+				return new Mailbox(name, flags);
+			};
+			setAccounts(prevAccounts => [...prevAccounts, new Account(accountPtr, email, name, serializedMailboxes.split("&&&&").map(deserializeIndividual))]);
+		});
 	}, []);
 
     return (
