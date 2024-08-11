@@ -19,7 +19,7 @@ export default function EmailsList({ accounts, messageHeaders }) {
 			setCounter(prevCounter => prevCounter + 1);
 		};
 
-		const color = messageHeader.selected ? "#cccccc" : accounts.find(acc => acc.accountPtr === messageHeader.accountPtr)?.color;
+		const color = messageHeader.selected ? "#cccccc" : accounts.find(acc => acc.accountPtr === messageHeader.accountPtr)?.userConfig.color;
 		return (
 			<TableRow key={messageHeader.accountPtr + messageHeader.uid} className={`email-delegate h-[40px]`} style={{backgroundColor: color}}>
 				<TableCell>

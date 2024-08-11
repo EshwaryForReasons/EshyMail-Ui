@@ -1,3 +1,5 @@
+import { randomHexColor } from "./utilities";
+
 export var EMailboxFlags = {
 	MBF_NONE 			: 0,
 	MBF_NoSelect		: 1,
@@ -18,13 +20,15 @@ export function Mailbox(name, flags) {
 	this.selected = false;
 }
 
-export function Account(accountPtr, email, name, mailboxes) {
+export function Account(accountPtr, email, name, mailboxes, userConfig) {
 	this.accountPtr = accountPtr;
 	this.email = email;
 	this.name = name;
 	this.selected = false;
-	this.color = "rgb(" + Math.round(Math.random() * 255) + "," + Math.round(Math.random() * 255) + "," + Math.round(Math.random() * 255) + ")";
 	this.mailboxes = mailboxes;
+	this.userConfig = userConfig != null ? userConfig : {
+		color: randomHexColor()
+	};
 }
 
 export function MessageHeader(accountPtr, uid, sender, subject, date, seen, flagged) {

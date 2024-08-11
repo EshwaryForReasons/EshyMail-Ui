@@ -2,44 +2,32 @@
 
 import { useEffect, useState } from "react"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "C/components/ui/resizable"
-import { ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuSeparator, ContextMenuShortcut, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger } from "C/components/ui/context-menu"
-import { Mailbox, Account, MessageHeader, EmailContent } from "C/components/data_structures"
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "C/components/ui/context-menu"
+import { Account, MessageHeader, EmailContent } from "C/components/data_structures"
+import { updateAccountsList } from "C/components/utilities"
 import LeftPanel from "./left_panel"
 import EmailsList from "./emails_list"
-import "C/styles/main.scss"
 
-const EmailView = ({ emailContent }) => (
+export const EmailView = ({ emailData }) => (
 	<div className="scrollbar-thin h-screen w-full float-right overflow-y-auto text-[#121212] bg-[#ffffff]">
-		{emailContent.subject != "" &&
-			<div className="flex items-center font-bold w-full p-1 pl-4">
-				<p>{"Subject: " + emailContent.subject}</p>
+		{emailData.subject !== "" &&
+			<div className="flex items-center font-bold w-full p-1 pl-4 shadow-xl">
+				<p>{"Subject: " + emailData.subject}</p>
 			</div>
 		}
-		<div className="px-10" dangerouslySetInnerHTML={{ __html: emailContent.content }}></div>
+		<div className="px-10" dangerouslySetInnerHTML={{ __html: emailData.content }}></div>
 	</div>
 );
 
 export default function Home() {
 	//I don't understand react so I've added this here to force rerenders
-    const [counter, setCounter] = useState(0);
+  const [counter, setCounter] = useState(0);
 
 	const [accounts, setAccounts] = useState([new Account("unified", "Unified", "Unified")]);
 	const [messageHeaders, setMessageHeaders] = useState([]);
-	const [emailContent, setEmailContent] = useState(new EmailContent("<no subject>", ""));
-
-	const jsAddAccount = (accountPtr, email, name, serializedMailboxes) => {
-		const deserializeIndividual = (individualSerializedMailbox) => {
-			const delimiter_pos = individualSerializedMailbox.indexOf("&&");
-			const name = individualSerializedMailbox.substring(0, delimiter_pos);
-			const flags = parseInt(individualSerializedMailbox.substring(delimiter_pos + 2));
-			return new Mailbox(name, flags);
-		};
-		setAccounts(prevAccounts => [...prevAccounts, new Account(accountPtr, email, name, serializedMailboxes.split("&&&&").map(deserializeIndividual))]);
-	}
-
-	const jsRemoveAccount = (email) =>
-		setAccounts(prevAccounts => prevAccounts.filter(prevAccount => prevAccount.email !== email));
-
+	const [emailContent, setEmailContent] = useState(new EmailContent("", ""));
+	const [broadcastChannel, setBroadcastChannel] = useState(new BroadcastChannel("mainChannel"));
+	
 	const jsAddMessageHeader = (accountPtr, uid, sender, subject, date, seen, flagged) => {
 		setMessageHeaders(prevMessageHeaders => [
 			...prevMessageHeaders,
@@ -47,8 +35,11 @@ export default function Home() {
 		]);
 	};
 
-	const jsUpdateEmailContent = (uid, subject, emailContent) =>
-		setEmailContent(new EmailContent(subject, emailContent));
+	const jsUpdateEmailContent = (uid, subject, content) => {
+		console.log("email received here");
+		console.log("Email gotten", content);
+		setEmailContent(new EmailContent(subject, content));
+	}
 
 	const jsUpdateMessageHeader = (accountPtr, uid, seen, flagged) => {
 		setMessageHeaders(prevMessageHeaders =>
@@ -65,20 +56,17 @@ export default function Home() {
 			return;
 
 		b_ran = true;
-		window.cefRegisterFunc("RemoveAccount", jsRemoveAccount);
+
 		window.cefRegisterFunc("AddMessageHeader", jsAddMessageHeader);
 		window.cefRegisterFunc("UpdateEmailContent", jsUpdateEmailContent);
 		window.cefRegisterFunc("UpdateMessageHeader", jsUpdateMessageHeader);
+		updateAccountsList(accounts, setAccounts);
 
-		window.cefGetAccountList((accountPtr, email, name, serializedMailboxes) => {
-			const deserializeIndividual = (individualSerializedMailbox) => {
-				const delimiter_pos = individualSerializedMailbox.indexOf("&&");
-				const name = individualSerializedMailbox.substring(0, delimiter_pos);
-				const flags = parseInt(individualSerializedMailbox.substring(delimiter_pos + 2));
-				return new Mailbox(name, flags);
-			};
-			setAccounts(prevAccounts => [...prevAccounts, new Account(accountPtr, email, name, serializedMailboxes.split("&&&&").map(deserializeIndividual))]);
-		});
+		broadcastChannel.onmessage = (message) => {
+			if (message.data === "accountsListUpdated") {
+				updateAccountsList(accounts, setAccounts);
+			}
+		};
 	}, []);
 
 	const loadMoreMessageHeaders = () =>
@@ -93,7 +81,7 @@ export default function Home() {
 			window.cefSetEmailFlaggedStatus(messageHeader.accountPtr, messageHeader.uid, !messageHeader.flagged));
 
 	return (
-		<div className="main">
+		<div className="flex flex-row">
 			<LeftPanel accounts={accounts} setAccounts={setAccounts} setMessageHeaders={setMessageHeaders} />
 			<ResizablePanelGroup
 				direction="horizontal"
@@ -113,7 +101,7 @@ export default function Home() {
 				</ResizablePanel>
 				<ResizableHandle />
 				<ResizablePanel defaultSize={50}>
-					<EmailView emailContent={emailContent} />
+					<EmailView emailData={emailContent} />
 				</ResizablePanel>
 			</ResizablePanelGroup>
 		</div>

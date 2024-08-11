@@ -16,6 +16,7 @@ export default function Compose() {
 	const [emails, setEmails] = useState([]);
 	const [subject, setSubject] = useState('');
 	const [content, setContent] = useState('');
+	const [broadcastChannel, setBroadcastChannel] = useState(new BroadcastChannel("mainChannel"));
 
 	const onSendToAccountChanged = (newAccountPtr) => {
 		for (let i in accounts) {
@@ -76,19 +77,23 @@ export default function Compose() {
 
 	};
 
-	const jsAddComposeAccount = (accountPtr, email, name, serializedMailboxes) => {
-		const deserializeIndividual = (individualSerializedMailbox) => {
-			const delimiter_pos = individualSerializedMailbox.indexOf("&&");
-			const name = individualSerializedMailbox.substring(0, delimiter_pos);
-			const flags = parseInt(individualSerializedMailbox.substring(delimiter_pos + 2));
-			return new Mailbox(name, flags);
-		};
-		setAccounts(prevAccounts => [...prevAccounts, new Account(accountPtr, email, name, serializedMailboxes.split("&&&&").map(deserializeIndividual))]);
-	};
+	const updateAccountsList = () => {
+		const jsAddAccount = (accountPtr, email, name, serializedMailboxes) => {
+			const deserializeIndividual = (individualSerializedMailbox) => {
+				const delimiter_pos = individualSerializedMailbox.indexOf("&&");
+				const name = individualSerializedMailbox.substring(0, delimiter_pos);
+				const flags = parseInt(individualSerializedMailbox.substring(delimiter_pos + 2));
+				return new Mailbox(name, flags);
+			};
+			setAccounts(prevAccounts => [...prevAccounts, new Account(accountPtr, email, name, serializedMailboxes.split("&&&&").map(deserializeIndividual))]);
+		}
 
-	const jsRemoveComposeAccount = (email) => {
+		setAccounts([]);
+		window.cefGetAccountList(jsAddAccount);
+	}
+
+	const jsRemoveAccount = (email) =>
 		setAccounts(prevAccounts => prevAccounts.filter(prevAccount => prevAccount.email !== email));
-	};
 
 	var b_ran = false;
 	useEffect(() => {
@@ -97,17 +102,13 @@ export default function Compose() {
 
 		b_ran = true;
 
-		window.cefRegisterFunc("RemoveComposeAccount", jsRemoveComposeAccount);
-		
-		window.cefGetAccountList((accountPtr, email, name, serializedMailboxes) => {
-			const deserializeIndividual = (individualSerializedMailbox) => {
-				const delimiter_pos = individualSerializedMailbox.indexOf("&&");
-				const name = individualSerializedMailbox.substring(0, delimiter_pos);
-				const flags = parseInt(individualSerializedMailbox.substring(delimiter_pos + 2));
-				return new Mailbox(name, flags);
-			};
-			setAccounts(prevAccounts => [...prevAccounts, new Account(accountPtr, email, name, serializedMailboxes.split("&&&&").map(deserializeIndividual))]);
-		});
+		updateAccountsList();
+
+		broadcastChannel.onmessage = (message) => {
+			if (message.data === "accountsListUpdated") {
+				updateAccountsList();
+			}
+		};
 	}, []);
 
 	return (
