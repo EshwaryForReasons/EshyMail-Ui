@@ -63,7 +63,7 @@ export default function AccountsPage({ broadcastChannel }) {
 			<CardHeader>
 				<CardTitle>
 					Accounts
-					<div className="grid grid-cols-2 w-72 gap-2 float-right">
+					<div className="grid grid-cols-1 w-36 gap-2 float-right">
 						<Dialog>
 							<DialogTrigger asChild>
 								<Button className="button">Add Account</Button>
@@ -118,36 +118,6 @@ export default function AccountsPage({ broadcastChannel }) {
 								</Carousel>
 							</DialogContent>
 						</Dialog>
-						<Dialog>
-							<DialogTrigger asChild>
-								<Button className="button">Delete Accounts</Button>
-							</DialogTrigger>
-							{accounts.filter(account => account.selected).length === 0 ? (
-								<DialogContent className="sm:max-w-[425px]">
-									<DialogHeader>
-										<DialogTitle>No accounts selected</DialogTitle>
-										<DialogDescription>
-											Please select accounts before attempting to delete them!
-										</DialogDescription>
-									</DialogHeader>
-									<DialogClose type="submit" className="bg-accent w-full button h-10">Go Back</DialogClose>
-								</DialogContent>
-							) : (
-								<DialogContent className="sm:max-w-[425px]">
-									<DialogHeader>
-										<DialogTitle>Are you sure?</DialogTitle>
-										<DialogDescription>
-											This will delete the following accounts and the corresponding data:
-											{accounts.filter(account => account.selected).map(acc => <li key={acc.email}>{acc.email}</li>)}
-										</DialogDescription>
-									</DialogHeader>
-									<div className="grid grid-cols-2 gap-4">
-										<DialogClose type="submit" className="bg-accent w-full button">Cancel</DialogClose>
-										<Button type="submit" className="w-full button" onClick={onDeleteAcconts}>Delete Accounts</Button>
-									</div>
-								</DialogContent>
-							)}
-						</Dialog>
 					</div>
 				</CardTitle>
 			</CardHeader>
@@ -155,7 +125,6 @@ export default function AccountsPage({ broadcastChannel }) {
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead></TableHead>
 							<TableHead>Name</TableHead>
 							<TableHead>Email</TableHead>
 							<TableHead></TableHead>
@@ -164,12 +133,6 @@ export default function AccountsPage({ broadcastChannel }) {
 					<TableBody>
 						{accounts.map(account => (
 							<TableRow key={account.email} style={{ height: "40px" }} className={"" + (account.selected ? "bg-accent" : "")}>
-								<TableCell style={{ width: "40px" }} className="hidden sm:table-cell">
-									<Checkbox onCheckedChange={(enabled) => {
-										setCounter(prevCounter => prevCounter + 1);
-										account.selected = enabled;
-									}} style={{ borderRadius: "5px" }}></Checkbox>
-								</TableCell>
 								<TableCell>
 									<div className="font-medium">{account.name}</div>
 								</TableCell>
@@ -190,7 +153,7 @@ export default function AccountsPage({ broadcastChannel }) {
 											<div className="grid grid-cols-2 gap-2 w-24">
 												<p>Color:</p>
 												<input type="color" value={account.userConfig.color} onChange={event => {
-													setAccounts(prevAccounts => prevAccounts.map(prevAccount => 
+													setAccounts(prevAccounts => prevAccounts.map(prevAccount =>
 														prevAccount.email == account.email ? {
 															...prevAccount,
 															userConfig: {
@@ -201,15 +164,32 @@ export default function AccountsPage({ broadcastChannel }) {
 													));
 												}} />
 											</div>
-											<div className="grid grid-cols-2 gap-4 w-96 align-right">
+											<div className="grid grid-cols-4 gap-4 w-full align-right">
 												<DialogClose type="submit" className="bg-accent button">Cancel</DialogClose>
 												<Button type="submit" className="button" onClick={() => {
 													window.cefUpdateAccountConfig(account.accountPtr, JSON.stringify(account.mailboxes), JSON.stringify(account.userConfig), () => {
 														console.log("Sending update message");
 														broadcastChannel.postMessage("accountsListUpdated")
-													}
-														);
+													});
 												}}>Save Changes</Button>
+												<div></div>
+												<Dialog>
+													<DialogTrigger asChild>
+														<Button className="button" style={{ backgroundColor: "#d1504b" }}>Delete Account</Button>
+													</DialogTrigger>
+													<DialogContent className="sm:max-w-[425px]">
+														<DialogHeader>
+															<DialogTitle>Are you sure?</DialogTitle>
+															<DialogDescription>
+																This action will delete the account {account.email} and the corresponding data. Are you sure?
+															</DialogDescription>
+														</DialogHeader>
+														<div className="grid grid-cols-2 gap-4">
+															<DialogClose type="submit" className="bg-accent w-full button">Cancel</DialogClose>
+															<Button type="submit" className="w-full button" onClick={() => window.cefDeleteAccounts(account.email, onAccountsListUpdated)}>Delete Account</Button>
+														</div>
+													</DialogContent>
+												</Dialog>
 											</div>
 										</DialogContent>
 									</Dialog>
